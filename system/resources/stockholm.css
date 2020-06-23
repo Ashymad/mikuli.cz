@@ -242,6 +242,8 @@ a:hover {
 .navigation {
     display: block;
     float: right;
+    margin-top: 0.5em;
+    font-size: 1em;
 }
 .navigation a {
     color: #666;
@@ -362,3 +364,22 @@ a:hover {
         border: none !important;
     }
 }
+.latex sub {
+	vertical-align: -0.6ex;
+	margin-left: -0.15em;
+	margin-right: -0.125em;
+	font-size: 1em;
+}
+
+.latex {
+	font-family: serif;
+	font-size: 1.5em;
+}
+
+.latex sup {
+	font-size: 0.7em;
+	vertical-align: 0.3em;
+	margin-left: -0.25em;
+	margin-right: -0.2em;
+}
+
