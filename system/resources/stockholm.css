@@ -366,7 +366,7 @@ a:hover {
 }
 .latex sub {
 	vertical-align: -0.6ex;
-	margin-left: -0.15em;
+	margin-left: -0.125em;
 	margin-right: -0.125em;
 	font-size: 1em;
 }
@@ -379,7 +379,7 @@ a:hover {
 .latex sup {
 	font-size: 0.7em;
 	vertical-align: 0.3em;
-	margin-left: -0.25em;
+	margin-left: -0.20em;
 	margin-right: -0.2em;
 }
 
