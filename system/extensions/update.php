@@ -4,7 +4,7 @@
 // This file may be used and distributed under the terms of the public license.
 
 class YellowUpdate {
-    const VERSION = "0.8.20";
+    const VERSION = "0.8.22";
     const TYPE = "feature";
     const PRIORITY = "2";
     public $yellow;                 //access to API
@@ -56,16 +56,6 @@ class YellowUpdate {
 
     // Handle update
     public function onUpdate($action) {
-        if ($action=="update") {  //TODO: remove later, converts old server settings
-            if ($this->yellow->system->isExisting("staticUrl")) {
-                $coreStaticUrl = $this->yellow->system->get("staticUrl");
-                $coreServerUrl = empty($this->yellow->system->get("serverUrl")) ? "auto" : $this->yellow->system->get("serverUrl");
-                $coreServerTimezone = $this->yellow->system->get("timezone");
-                $fileName = $this->yellow->system->get("coreSettingDirectory").$this->yellow->system->get("coreSystemFile");
-                $this->yellow->system->save($fileName, array("coreStaticUrl" => $coreStaticUrl, "coreServerUrl" => $coreServerUrl,
-                    "coreServerTimezone" => $coreServerTimezone));
-            }
-        }
         if ($action=="update") {  //TODO: remove later, converts old content settings
             if ($this->yellow->system->isExisting("multiLanguageMode")) {
                 $coreMultiLanguageMode = $this->yellow->system->get("multiLanguageMode");
@@ -99,33 +89,40 @@ class YellowUpdate {
             }
         }
         if ($action=="update") {  //TODO: remove later, converts old layout files
-            if ($this->yellow->system->isExisting("navigation")) {
-                $navigation = $this->yellow->system->get("navigation");
-                $path = $this->yellow->system->get("coreLayoutDirectory");
+            if ($this->yellow->system->isExisting("coreLayoutDir")) {
+                $path = $this->yellow->system->get("coreLayoutDir");
                 foreach ($this->yellow->toolbox->getDirectoryEntriesRecursive($path, "/^.*\.html$/", true, false) as $entry) {
                     $fileData = $fileDataNew = $this->yellow->toolbox->readFile($entry);
-                    $fileDataNew = str_replace("system->get(\"serverScheme\")", "system->get(\"coreServerScheme\")", $fileDataNew);
-                    $fileDataNew = str_replace("system->get(\"serverAddress\")", "system->get(\"coreServerAddress\")", $fileDataNew);
-                    $fileDataNew = str_replace("system->get(\"serverBase\")", "system->get(\"coreServerBase\")", $fileDataNew);
-                    $fileDataNew = str_replace("system->get(\"imageLocation\")", "system->get(\"coreImageLocation\")", $fileDataNew);
-                    $fileDataNew = str_replace("system->get(\"extensionLocation\")", "system->get(\"coreExtensionLocation\")", $fileDataNew);
-                    $fileDataNew = str_replace("system->get(\"resourceLocation\")", "system->get(\"coreResourceLocation\")", $fileDataNew);
-                    $fileDataNew = str_replace("text->getHtml(\"paginationPrevious\")", "text->getHtml(\"corePaginationPrevious\")", $fileDataNew);
-                    $fileDataNew = str_replace("text->getHtml(\"paginationNext\")", "text->getHtml(\"corePaginationNext\")", $fileDataNew);
+                    $fileDataNew = str_replace("yellow->getLayoutArgs", "yellow->getLayoutArguments", $fileDataNew);
+                    $fileDataNew = str_replace("toolbox->getLocationArgs", "toolbox->getLocationArguments", $fileDataNew);
+                    $fileDataNew = str_replace("toolbox->getTextArgs", "toolbox->getTextArguments", $fileDataNew);
+                    $fileDataNew = str_replace("toolbox->normaliseArgs", "toolbox->normaliseArguments", $fileDataNew);
+                    $fileDataNew = str_replace("toolbox->isLocationArgs", "toolbox->isLocationArguments", $fileDataNew);
+                    $fileDataNew = str_replace("\$this->yellow->page->get(\"navigation\")", "\"navigation\"", $fileDataNew);
                     $fileDataNew = str_replace("\$this->yellow->page->get(\"header\")", "\"header\"", $fileDataNew);
                     $fileDataNew = str_replace("\$this->yellow->page->get(\"sidebar\")", "\"sidebar\"", $fileDataNew);
                     $fileDataNew = str_replace("\$this->yellow->page->get(\"footer\")", "\"footer\"", $fileDataNew);
-                    $fileDataNew = str_replace("\$this->yellow->page->get(\"navigation\")", "\"$navigation\"", $fileDataNew);
                     if ($fileData!=$fileDataNew && !$this->yellow->toolbox->createFile($entry, $fileDataNew)) {
                         $this->yellow->log("error", "Can't write file '$entry'!");
                     }
                 }
             }
         }
+        if ($action=="update") {  //TODO: remove later, converts old commandline
+            if ($this->yellow->system->isExisting("coreStaticDir")) {
+                $fileName = "yellow.php";
+                $fileData = $fileDataNew = $this->yellow->toolbox->readFile($fileName);
+                $fileDataNew = str_replace("make websites", "make small websites", $fileDataNew);
+                $fileDataNew = str_replace("command(\$argv[1], \$argv[2], \$argv[3], \$argv[4], \$argv[5], \$argv[6], \$argv[7])", "command()", $fileDataNew);
+                if ($fileData!=$fileDataNew && !$this->yellow->toolbox->createFile($fileName, $fileDataNew)) {
+                    $this->yellow->log("error", "Can't write file '$fileName'!");
+                }
+            }
+        }
         if ($action=="startup") {
             if ($this->yellow->system->get("updateNotification")!="none") {
                 foreach (explode(",", $this->yellow->system->get("updateNotification")) as $token) {
-                    list($extension, $action) = explode("/", $token, 2);
+                    list($extension, $action) = $this->yellow->toolbox->getTextList($token, "/", 2);
                     if ($this->yellow->extensions->isExisting($extension) && ($action!="startup" && $action!="uninstall")) {
                         $value = $this->yellow->extensions->extensions[$extension];
                         if (method_exists($value["obj"], "onUpdate")) $value["obj"]->onUpdate($action);
@@ -339,7 +336,7 @@ class YellowUpdate {
         if (empty($extensions)) {
             foreach ($dataCurrent as $key=>$value) {
                 if (isset($dataLatest[$key])) {
-                    list($version) = explode(",", $dataLatest[$key]);
+                    list($version, $dummy1, $dummy2) = $this->yellow->toolbox->getTextList($dataLatest[$key], ",", 3);
                     if (strnatcasecmp($dataCurrent[$key], $version)<0) $data[$key] = $dataLatest[$key];
                     if (isset($dataModified[$key]) && !empty($version) && $force) $data[$key] = $dataLatest[$key];
                 }
@@ -349,7 +346,7 @@ class YellowUpdate {
                 $found = false;
                 foreach ($dataCurrent as $key=>$value) {
                     if (isset($dataLatest[$key])) {
-                        list($version) = explode(",", $dataLatest[$key]);
+                        list($version, $dummy1, $dummy2) = $this->yellow->toolbox->getTextList($dataLatest[$key], ",", 3);
                         if (strtoloweru($key)==strtoloweru($extension) && !empty($version)) {
                             $data[$key] = $dataLatest[$key];
                             $dataModified = array_intersect_key($dataModified, $data);
@@ -366,7 +363,7 @@ class YellowUpdate {
         }
         if ($statusCode==200) {
             foreach (array_merge($dataModified, $data) as $key=>$value) {
-                list($version) = explode(",", $value);
+                list($version, $dummy1, $dummy2) = $this->yellow->toolbox->getTextList($value, ",", 3);
                 if (!isset($dataModified[$key]) || $force) {
                     echo ucfirst($key)." $version\n";
                 } else {
@@ -381,8 +378,8 @@ class YellowUpdate {
     public function showExtensions() {
         list($statusCode, $dataLatest) = $this->getExtensionsVersion(true, true);
         foreach ($dataLatest as $key=>$value) {
-            list($version, $url, $description) = explode(",", $value, 3);
-            echo ucfirst($key).": $description\n";
+            list($dummy1, $dummy2, $text) = $this->yellow->toolbox->getTextList($value, ",", 3);
+            echo ucfirst($key).": $text\n";
         }
         if ($statusCode!=200) echo "ERROR checking extensions: ".$this->yellow->page->get("pageError")."\n";
         return $statusCode;
@@ -395,7 +392,7 @@ class YellowUpdate {
         $fileExtension = $this->yellow->system->get("coreDownloadExtension");
         foreach ($data as $key=>$value) {
             $fileName = $path.$this->yellow->lookup->normaliseName($key, true, false, true).".zip";
-            list($version, $url) = explode(",", $value);
+            list($dummy1, $url, $dummy2) = $this->yellow->toolbox->getTextList($value, ",", 3);
             list($statusCode, $fileData) = $this->getExtensionFile($url);
             if (empty($fileData) || !$this->yellow->toolbox->createFile($fileName.$fileExtension, $fileData)) {
                 $statusCode = 500;
@@ -462,7 +459,7 @@ class YellowUpdate {
                     if (lcfirst($matches[1])=="language") $language = $matches[2];
                     if (!empty($matches[1]) && !empty($matches[2]) && strposu($matches[1], "/")) {
                         $fileName = $matches[1];
-                        list($dummy, $entry, $flags) = explode(",", $matches[2], 3);
+                        list($dummy, $entry, $flags) = $this->yellow->toolbox->getTextList($matches[2], ",", 3);
                         foreach ($rootPages as $page) {
                             list($fileNameSource, $fileNameDestination) = $this->getExtensionsFileNames($fileName, $entry, $flags, $language, $pathBase, $page);
                             $fileData = $zip->getFromName($fileNameSource);
@@ -594,7 +591,7 @@ class YellowUpdate {
                     preg_match("/^\s*(.*?)\s*:\s*(.*?)\s*$/", $line, $matches);
                     if (!empty($matches[1]) && !empty($matches[2])) {
                         $extension = lcfirst($matches[1]);
-                        list($version) = explode(",", $matches[2]);
+                        list($version, $dummy1, $dummy2) = $this->yellow->toolbox->getTextList($matches[2], ",", 3);
                         $data[$extension] = $rawFormat ? $matches[2] : $version;
                     }
                 }
@@ -616,7 +613,7 @@ class YellowUpdate {
                 preg_match("/^\s*(.*?)\s*:\s*(.*?)\s*$/", $line, $matches);
                 if (!empty($matches[1]) && !empty($matches[2])) {
                     $fileName = $matches[1];
-                    list($extension) = explode(",", lcfirst($matches[2]), 3);
+                    list($extension, $dummy1, $dummy2) = $this->yellow->toolbox->getTextList(lcfirst($matches[2]), ",", 3);
                     if (!isset($data[$extension])) {
                         $data[$extension] = $fileName;
                     } else {
@@ -641,7 +638,7 @@ class YellowUpdate {
                 preg_match("/^\s*(.*?)\s*:\s*(.*?)\s*$/", $line, $matches);
                 if (!empty($matches[1]) && !empty($matches[2])) {
                     $fileName = $matches[1];
-                    list($extensionNew, $dummy, $flags) = explode(",", lcfirst($matches[2]), 3);
+                    list($extensionNew, $dummy, $flags) = $this->yellow->toolbox->getTextList(lcfirst($matches[2]), ",", 3);
                     if ($extension!=$extensionNew) {
                         $extension = $extensionNew;
                         $lastPublished = $this->yellow->toolbox->getFileModified($fileName);
