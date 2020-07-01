@@ -1,9 +1,9 @@
 ---
-Title: Hi
+Title: I
 ---
 
 <img style="float: right;" width="150" src="media/images/Mikulicz_paszp3_alp.png">
-my name is Szymon Mikulicz.
+am Szymon Mikulicz.
 
 I am an open source maniac and an all-around self-diagnosed weirdo. Currently
 I am doing a Phd in mechanical engineering on the AGH UST and work at Nokia as
@@ -23,9 +23,9 @@ for the whole night, the difference between the current version and the version
 from a few hours ago is barely perceptible, but you know deep inside that it's
 just as wide as it should be. Perfectly.
 
-Checkout what I do except typesetting: design, program, listen.
-I also play music, bake bread and read, these may or may not appear here
-someday. Hope you like what you see :)
+Checkout what I do except typesetting: [design](design), [program](program),
+[listen](listen).  I also play music, bake bread and read, these may or may not
+appear here someday. Hope you like what you see.
 
 Want to contact me? Direct your mail to szymon.mikulicz at posteo.net
 
