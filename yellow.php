@@ -1,9 +1,7 @@
 <?php
-// Datenstrom Yellow is for people who make small websites, https://datenstrom.se/yellow/
-// Copyright (c) 2013-2020 Datenstrom, https://datenstrom.se
-// This file may be used and distributed under the terms of the public license.
+// Datenstrom Yellow, https://github.com/datenstrom/yellow
 
-require_once("system/extensions/core.php");
+require("system/extensions/core.php");
 
 if (PHP_SAPI!="cli") {
     $yellow = new YellowCore();

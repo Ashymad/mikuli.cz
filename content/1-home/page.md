@@ -28,5 +28,3 @@ Checkout what I do except typesetting: [design](design), [program](program),
 appear here someday. Hope you like what you see.
 
 Want to contact me? Direct your mail to szymon.mikulicz at posteo.net
-
-

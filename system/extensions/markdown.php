@@ -1,12 +1,9 @@
 <?php
-// Markdown extension, https://github.com/datenstrom/yellow-extensions/tree/master/features/markdown
-// Copyright (c) 2013-2020 Datenstrom, https://datenstrom.se
-// This file may be used and distributed under the terms of the public license.
+// Markdown extension, https://github.com/annaesvensson/yellow-markdown
 
 class YellowMarkdown {
-    const VERSION = "0.8.14";
-    const TYPE = "feature";
-    public $yellow;         //access to API
+    const VERSION = "0.8.26";
+    public $yellow;         // access to API
     
     // Handle initialisation
     public function onLoad($yellow) {
@@ -16,7 +13,9 @@ class YellowMarkdown {
     // Handle page content in raw format
     public function onParseContentRaw($page, $text) {
         $markdown = new YellowMarkdownParser($this->yellow, $page);
-        return $markdown->transform($text);
+        $text = $markdown->transform($text);
+        $text = $this->yellow->lookup->normaliseData($text, "html");
+        return $text;
     }
 }
 
@@ -3831,14 +3830,13 @@ class MarkdownExtraParser extends MarkdownParser {
 	}
 }
 
-// Datenstrom Yellow Markdown parser
-// Copyright (c) 2013-2020 Datenstrom
+// Markdown parser, Copyright Datenstrom, License GPLv2
 
 class YellowMarkdownParser extends MarkdownExtraParser {
-    public $yellow;             //access to API
-    public $page;               //access to page
-    public $idAttributes;       //id attributes
-    public $noticeLevel;        //recursive level
+    public $yellow;             // access to API
+    public $page;               // access to page
+    public $idAttributes;       // id attributes
+    public $noticeLevel;        // recursive level
 
     public function __construct($yellow, $page) {
         $this->yellow = $yellow;
@@ -3846,17 +3844,18 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $this->idAttributes = array();
         $this->noticeLevel = 0;
         $this->url_filter_func = function($url) use ($yellow, $page) {
-            return $yellow->lookup->normaliseLocation($url, $page->location);
+            return $yellow->lookup->normaliseLocation($url, $page->getPage("main")->location);
         };
         $this->span_gamut += array("doStrikethrough" => 55);
         $this->block_gamut += array("doNoticeBlocks" => 65);
+        $this->document_gamut += array("doFootnotesLinks" => 55);
         $this->escape_chars .= "~";
         parent::__construct();
     }
 
     // Handle striketrough
     public function doStrikethrough($text) {
-        $parts = preg_split("/(?<![~])(~~)(?![~])/", $text, null, PREG_SPLIT_DELIM_CAPTURE);
+        $parts = preg_split("/(?<![~])(~~)(?![~])/", $text, -1, PREG_SPLIT_DELIM_CAPTURE);
         if (count($parts)>3) {
             $text = "";
             $open = false;
@@ -3877,7 +3876,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
     public function doAutoLinks($text) {
         $text = preg_replace_callback("/<(\w+:[^\'\">\s]+)>/", array($this, "_doAutoLinks_url_callback"), $text);
         $text = preg_replace_callback("/<([\w\+\-\.]+@[\w\-\.]+)>/", array($this, "_doAutoLinks_email_callback"), $text);
-        $text = preg_replace_callback("/^\s*\[(\w+)(.*?)\]\s*$/", array($this, "_doAutoLinks_shortcutBlock_callback"), $text);
+        $text = preg_replace_callback("/^\s*\[(\w+)([^\]]*)\]\s*$/", array($this, "_doAutoLinks_shortcutBlock_callback"), $text);
         $text = preg_replace_callback("/\[(\w+)(.*?)\]/", array($this, "_doAutoLinks_shortcutInline_callback"), $text);
         $text = preg_replace_callback("/\[\-\-(.*?)\-\-\]/", array($this, "_doAutoLinks_shortcutComment_callback"), $text);
         $text = preg_replace_callback("/\:([\w\+\-\_]+)\:/", array($this, "_doAutoLinks_shortcutSymbol_callback"), $text);
@@ -3913,7 +3912,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
     // Handle fenced code blocks
     public function _doFencedCodeBlocks_callback($matches) {
         $text = $matches[4];
-        $name = empty($matches[2]) ? "" : trim("$matches[2] $matches[3]");
+        $name = is_string_empty($matches[2]) ? "" : trim("$matches[2] $matches[3]");
         $output = $this->page->parseContentShortcut($name, $text, "code");
         if (is_null($output)) {
             $attr = $this->doExtraAttributes("pre", ".$matches[2] $matches[3]");
@@ -3928,7 +3927,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $text = $matches[1];
         $level = $matches[3][0]=="=" ? 1 : 2;
         $attr = $this->doExtraAttributes("h$level", $dummy =& $matches[2]);
-        if (empty($attr) && $level>=2 && $level<=3) $attr = $this->getIdAttribute($text);
+        if (is_string_empty($attr) && $level>=2) $attr = $this->getIdAttribute($text);
         $output = "<h$level$attr>".$this->runSpanGamut($text)."</h$level>";
         return "\n".$this->hashBlock($output)."\n\n";
     }
@@ -3938,7 +3937,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $text = $matches[2];
         $level = strlen($matches[1]);
         $attr = $this->doExtraAttributes("h$level", $dummy =& $matches[3]);
-        if (empty($attr) && $level>=2 && $level<=3) $attr = $this->getIdAttribute($text);
+        if (is_string_empty($attr) && $level>=2) $attr = $this->getIdAttribute($text);
         $output = "<h$level$attr>".$this->runSpanGamut($text)."</h$level>";
         return "\n".$this->hashBlock($output)."\n\n";
     }
@@ -3950,7 +3949,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $title = isset($matches[7]) ? $matches[7] : "";
         $attr = $this->doExtraAttributes("a", $dummy =& $matches[8]);
         $output = "<a href=\"".$this->encodeURLAttribute($url)."\"";
-        if (!empty($title)) $output .= " title=\"".$this->encodeAttribute($title)."\"";
+        if (!is_string_empty($title)) $output .= " title=\"".$this->encodeAttribute($title)."\"";
         $output .= $attr;
         $output .= ">".$this->runSpanGamut($text)."</a>";
         return $this->hashPart($output);
@@ -3966,8 +3965,8 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $title = isset($matches[7]) ? $matches[7] : $matches[2];
         $attr = $this->doExtraAttributes("img", $dummy =& $matches[8]);
         $output = "<img src=\"".$this->encodeURLAttribute($src)."\"";
-        if (!empty($alt)) $output .= " alt=\"".$this->encodeAttribute($alt)."\"";
-        if (!empty($title)) $output .= " title=\"".$this->encodeAttribute($title)."\"";
+        if (!is_string_empty($alt)) $output .= " alt=\"".$this->encodeAttribute($alt)."\"";
+        if (!is_string_empty($title)) $output .= " title=\"".$this->encodeAttribute($title)."\"";
         $output .= $attr;
         $output .= $this->empty_element_suffix;
         return $this->hashPart($output);
@@ -3996,6 +3995,11 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         return "<li$attr>".$item."</li>\n";
     }
     
+    // Handle blockquotes, CommonMark compatible
+    public function doBlockQuotes($text) {
+        return preg_replace_callback("/((?>^[ ]*>[ ]?.+\n(.+\n)*)+)/m", array($this, "_doBlockQuotes_callback"), $text);
+    }
+    
     // Handle notice blocks
     public function doNoticeBlocks($text) {
         return preg_replace_callback("/((?>^[ ]*!(?!\[)[ ]?.+\n(.+\n)*)+)/m", array($this, "_doNoticeBlocks_callback"), $text);
@@ -4013,7 +4017,7 @@ class YellowMarkdownParser extends MarkdownExtraParser {
             $level = strspn(str_replace(array("![", " "), "", $lines), "!");
             $attr = " class=\"notice$level\"";
         }
-        if (!empty($text)) {
+        if (!is_string_empty($text)) {
             ++$this->noticeLevel;
             $output = "<div$attr>\n".$this->runBlockGamut($text)."\n</div>";
             --$this->noticeLevel;
@@ -4023,6 +4027,25 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         return "\n".$this->hashBlock($output)."\n\n";
     }
     
+    // Handle footnotes links, normalise ids and links
+    public function doFootnotesLinks($text) {
+        if (!is_null($this->footnotes_assembled)) {
+            $callbackId = function ($matches) {
+                $id = str_replace(":", "-", $matches[2]);
+                return "<$matches[1] id=\"$id\" $matches[3]>";
+            };
+            $text = preg_replace_callback("/<(li|sup) id=\"(fn:\d+)\"(.*?)>/", $callbackId, $text);
+            $text = preg_replace_callback("/<(li|sup) id=\"(fnref\d*:\d+)\"(.*?)>/", $callbackId, $text);
+            $callbackHref = function ($matches) {
+                $href = $this->page->base.$this->page->location.str_replace(":", "-", $matches[2]);
+                return "<$matches[1] href=\"$href\" $matches[3]>";
+            };
+            $text = preg_replace_callback("/<(a) href=\"(#fn:\d+)\"(.*?)>/", $callbackHref, $text);
+            $text = preg_replace_callback("/<(a) href=\"(#fnref\d*:\d+)\"(.*?)>/", $callbackHref, $text);
+        }
+		return $text;
+    }
+
     // Return unique id attribute
     public function getIdAttribute($text) {
         $attr = "";
