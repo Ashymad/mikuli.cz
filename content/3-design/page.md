@@ -18,8 +18,7 @@ made by me). Has a small version:
 [facebook](https://facebook.com/LabAcoustics).
 
 <img width="150" src="/media/images/5hy.proto.svg"><br>
-A logo made for my old domain, in use over at my [cgit instance](https://git.5hy.men).
-
+A logo made for my old domain, not in use anymore.
 
 <img width="170" src="/media/images/Ashymad2.1.svg"><br>
 A personal logo, currently not in use.

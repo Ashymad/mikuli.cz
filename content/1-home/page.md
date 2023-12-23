@@ -5,10 +5,10 @@ Title: I
 <img style="float: right;" width="150" src="media/images/Mikulicz_paszp3_alp.png">
 am Szymon Mikulicz.
 
-I am an open source maniac and an all-around self-diagnosed weirdo. Currently
-I am doing a Phd in mechanical engineering on the AGH UST and work at Nokia as
-a software engineer. My research is centered around signal processing and audio
-in general.
+I am an open source maniac and an all-around self-diagnosed weirdo. Currently I
+am doing a Bachelor's in philosophy on the University of Warsaw, having already
+finished my Masters in acoustic engineering and having done half a Phd as well. I also
+work at Aptiv as a software engineer. 
 
 I enjoy creating and analyzing complicated software. The kind that makes you
 look and wonder "I don't know how it works, I don't know why it works and I
@@ -24,7 +24,7 @@ from a few hours ago is barely perceptible, but you know deep inside that it's
 just as wide as it should be. Perfectly.
 
 Checkout what I do except typesetting: [design](design), [program](program),
-[listen](listen).  I also play music, bake bread and read, these may or may not
-appear here someday. Hope you like what you see.
+[listen](listen), [write](write). I also play music, bake bread and read, these
+may or may not appear here someday. Hope you like what you see.
 
-Want to contact me? Direct your mail to szymon.mikulicz at posteo.net
+Want to contact me? Direct your mail to szymon at mikuli.cz

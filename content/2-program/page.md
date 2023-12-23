@@ -1,10 +1,9 @@
 ---
 Title: program
 ---
-I create software. Not only at work. Currently I am working on a playback
-synchronization software to enable distributed Wave Field Synthesis system
-creation with Raspberry Pis. You can find everything that I create on my
-[github](https://github.com/Ashymad) and mirrored [here](https://git.5hy.men).
+I create software. Not only at work. Currently I am going through the "Crafting
+Interpreters" book, learning how to create a programming language. You can find
+everything that I create on my [github](https://github.com/Ashymad)
 
 <center>[<img src="http://ghchart.rshah.org/Ashymad" alt="Github Contributions">](https://github.com/Ashymad)</center>
 
