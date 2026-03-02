@@ -5,18 +5,14 @@
 :root {
     --bg: #fff;
     --code-bg: #f7f7f7;
-    --notice1-bg: #fffbf0;
-    --notice2-bg: #fdf0f0;
-    --notice3-bg: #f0f8fe;
+    --important-bg: #f0f8fe;
     --heading: #111;
-    --text: #666;
+    --text: #333;
     --code: #666;
     --link: #07d;
     --link-active: #29f;
     --blockquote-accent: #29f;
-    --notice1-accent: #fb0;
-    --notice2-accent: #d00;
-    --notice3-accent: #08e;
+    --important-accent: #08e;
     --separator: #ddd;
     --border: #bbb;
     --font: "Open Sans", Helvetica, sans-serif;
@@ -112,15 +108,20 @@ a:hover {
     border-spacing: 0;
     border-collapse: collapse;
 }
-.content th {
+.content th:not([align]) {
     text-align: left;
-    padding: 0.3em;
-    border-bottom: 1px solid var(--separator);
 }
+.content th,
 .content td {
-    text-align: left;
     padding: 0.3em;
-    padding-right: 2em;
+    padding-left: 2em;
+}
+.content th:first-child,
+.content td:first-child {
+    padding: 0.3em;
+}
+.content th {
+    border-bottom: 1px solid var(--separator);
 }
 .content code,
 .content pre {
@@ -156,26 +157,18 @@ a:hover {
     font-weight: bold;
     border-left: 3px solid var(--blockquote-accent);
 }
-.content .notice1 {
-    margin: 1em 0;
-    padding: 10px 1em;
-    background-color: var(--notice1-bg);
-    border-left: 10px solid var(--notice1-accent);
+.content details summary {
+    padding-left: inherit;
+    cursor: pointer;
 }
-.content .notice2 {
-    margin: 1em 0;
-    padding: 10px 1em;
-    background-color: var(--notice2-bg);
-    border-left: 10px solid var(--notice2-accent);
+.content details > * {
+    padding-left: 1em;
 }
-.content .notice3,
-.content .notice4,
-.content .notice5,
-.content .notice6 {
+.content .important {
     margin: 1em 0;
     padding: 10px 1em;
-    background-color: var(--notice3-bg);
-    border-left: 10px solid var(--notice3-accent);
+    background-color: var(--important-bg);
+    border-left: 10px solid var(--important-accent);
 }
 .content .flexible {
     position: relative;
@@ -389,6 +382,8 @@ a:hover {
         border: none !important;
     }
 }
+
+/* Custom */
 .latex sub {
 	vertical-align: -0.6ex;
 	margin-left: -0.125em;
@@ -407,4 +402,3 @@ a:hover {
 	margin-left: -0.20em;
 	margin-right: -0.2em;
 }
-

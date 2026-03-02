@@ -2,7 +2,7 @@
 // Markdown extension, https://github.com/annaesvensson/yellow-markdown
 
 class YellowMarkdown {
-    const VERSION = "0.8.26";
+    const VERSION = "0.9.8";
     public $yellow;         // access to API
     
     // Handle initialisation
@@ -20,7 +20,7 @@ class YellowMarkdown {
 }
 
 // PHP Markdown Lib
-// Copyright (c) 2004-2018 Michel Fortin
+// Copyright (c) 2004-2021 Michel Fortin
 // <https://michelf.ca/>
 // All rights reserved.
 //
@@ -61,7 +61,7 @@ class MarkdownParser {
 	 * Define the package version
 	 * @var string
 	 */
-	const MARKDOWNLIB_VERSION = "1.9.0";
+	const MARKDOWNLIB_VERSION = "1.9.1";
 
 	/**
 	 * Simple function interface - Initialize the parser and return the result
@@ -397,7 +397,7 @@ class MarkdownParser {
 		$block_tags_b_re = 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|address|'.
 						   'script|noscript|style|form|fieldset|iframe|math|svg|'.
 						   'article|section|nav|aside|hgroup|header|footer|'.
-						   'figure';
+						   'figure|details|summary';
 
 		// Regular expression for the content of a block tag.
 		$nested_tags_level = 4;
@@ -2283,7 +2283,7 @@ class MarkdownExtraParser extends MarkdownParser {
 	 * Tags that are always treated as block tags
 	 * @var string
 	 */
-	protected $block_tags_re = 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|address|form|fieldset|iframe|hr|legend|article|section|nav|aside|hgroup|header|footer|figcaption|figure';
+	protected $block_tags_re = 'p|div|h[1-6]|blockquote|pre|table|dl|ol|ul|address|form|fieldset|iframe|hr|legend|article|section|nav|aside|hgroup|header|footer|figcaption|figure|details|summary';
 
 	/**
 	 * Tags treated as block tags only if the opening tag is alone on its line
@@ -2870,6 +2870,7 @@ class MarkdownExtraParser extends MarkdownParser {
 	protected function _doAnchors_inline_callback($matches) {
 		$link_text		=  $this->runSpanGamut($matches[2]);
 		$url			=  $matches[3] === '' ? $matches[4] : $matches[3];
+		$title_quote	=& $matches[6];
 		$title			=& $matches[7];
 		$attr  = $this->doExtraAttributes("a", $dummy =& $matches[8]);
 
@@ -2882,7 +2883,7 @@ class MarkdownExtraParser extends MarkdownParser {
 		$url = $this->encodeURLAttribute($url);
 
 		$result = "<a href=\"$url\"";
-		if (isset($title)) {
+		if (isset($title) && $title_quote) {
 			$title = $this->encodeAttribute($title);
 			$result .=  " title=\"$title\"";
 		}
@@ -2994,13 +2995,14 @@ class MarkdownExtraParser extends MarkdownParser {
 	protected function _doImages_inline_callback($matches) {
 		$alt_text		= $matches[2];
 		$url			= $matches[3] === '' ? $matches[4] : $matches[3];
+		$title_quote	=& $matches[6];
 		$title			=& $matches[7];
 		$attr  = $this->doExtraAttributes("img", $dummy =& $matches[8]);
 
 		$alt_text = $this->encodeAttribute($alt_text);
 		$url = $this->encodeURLAttribute($url);
 		$result = "<img src=\"$url\" alt=\"$alt_text\"";
-		if (isset($title)) {
+		if (isset($title) && $title_quote) {
 			$title = $this->encodeAttribute($title);
 			$result .=  " title=\"$title\""; // $title already quoted
 		}
@@ -3836,20 +3838,19 @@ class YellowMarkdownParser extends MarkdownExtraParser {
     public $yellow;             // access to API
     public $page;               // access to page
     public $idAttributes;       // id attributes
-    public $noticeLevel;        // recursive level
 
     public function __construct($yellow, $page) {
         $this->yellow = $yellow;
         $this->page = $page;
         $this->idAttributes = array();
-        $this->noticeLevel = 0;
         $this->url_filter_func = function($url) use ($yellow, $page) {
             return $yellow->lookup->normaliseLocation($url, $page->getPage("main")->location);
         };
         $this->span_gamut += array("doStrikethrough" => 55);
-        $this->block_gamut += array("doNoticeBlocks" => 65);
+        $this->block_gamut += array("doCollapsibleBlocks" => 65);
+        $this->block_gamut += array("doGeneralBlocks" => 75);
         $this->document_gamut += array("doFootnotesLinks" => 55);
-        $this->escape_chars .= "~";
+        $this->escape_chars .= "~?";
         parent::__construct();
     }
 
@@ -3881,19 +3882,19 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         $text = preg_replace_callback("/\[\-\-(.*?)\-\-\]/", array($this, "_doAutoLinks_shortcutComment_callback"), $text);
         $text = preg_replace_callback("/\:([\w\+\-\_]+)\:/", array($this, "_doAutoLinks_shortcutSymbol_callback"), $text);
         $text = preg_replace_callback("/((http|https|ftp):\/\/\S+[^\'\"\,\.\;\:\*\~\s]+)/", array($this, "_doAutoLinks_url_callback"), $text);
-        $text = preg_replace_callback("/([\w\+\-\.]+@[\w\-\.]+\.[\w]{2,4})/", array($this, "_doAutoLinks_email_callback"), $text);
+        $text = preg_replace_callback("/([\w\+\-\.]+@[\w\-\.]+\.[\w]+)/", array($this, "_doAutoLinks_email_callback"), $text);
         return $text;
     }
     
     // Handle shortcuts, block style
     public function _doAutoLinks_shortcutBlock_callback($matches) {
-        $output = $this->page->parseContentShortcut($matches[1], trim($matches[2]), "block");
+        $output = $this->page->parseContentElement($matches[1], trim($matches[2]), "", "block");
         return is_null($output) ? $matches[0] : $this->hashBlock($output);
     }
     
     // Handle shortcuts, inline style
     public function _doAutoLinks_shortcutInline_callback($matches) {
-        $output = $this->page->parseContentShortcut($matches[1], trim($matches[2]), "inline");
+        $output = $this->page->parseContentElement($matches[1], trim($matches[2]), "", "inline");
         return is_null($output) ? $matches[0] : $this->hashPart($output);
     }
     
@@ -3905,15 +3906,16 @@ class YellowMarkdownParser extends MarkdownExtraParser {
     
     // Handle shortcuts, symbol style
     public function _doAutoLinks_shortcutSymbol_callback($matches) {
-        $output = $this->page->parseContentShortcut("", $matches[1], "symbol");
+        $output = $this->page->parseContentElement("", $matches[1], "", "symbol");
         return is_null($output) ? $matches[0] : $this->hashPart($output);
     }
     
     // Handle fenced code blocks
     public function _doFencedCodeBlocks_callback($matches) {
+        $name = $this->getBlockName($matches[2], $matches[3]);
         $text = $matches[4];
-        $name = is_string_empty($matches[2]) ? "" : trim("$matches[2] $matches[3]");
-        $output = $this->page->parseContentShortcut($name, $text, "code");
+        $attributes = $matches[3];
+        $output = $this->page->parseContentElement($name, $text, $attributes, "code");
         if (is_null($output)) {
             $attr = $this->doExtraAttributes("pre", ".$matches[2] $matches[3]");
             $output = "<pre$attr><code>".htmlspecialchars($text, ENT_NOQUOTES)."</code></pre>";
@@ -4000,27 +4002,59 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         return preg_replace_callback("/((?>^[ ]*>[ ]?.+\n(.+\n)*)+)/m", array($this, "_doBlockQuotes_callback"), $text);
     }
     
-    // Handle notice blocks
-    public function doNoticeBlocks($text) {
-        return preg_replace_callback("/((?>^[ ]*!(?!\[)[ ]?.+\n(.+\n)*)+)/m", array($this, "_doNoticeBlocks_callback"), $text);
+    // Handle collapsible block elements
+    public function doCollapsibleBlocks($text) {
+        return preg_replace_callback("/((?>^[ ]*\?[ ]?.+\n(.+\n)*)+)/m", array($this, "_doCollapsibleBlocks_callback"), $text);
     }
     
-    // Handle notice blocks over multiple lines
-    public function _doNoticeBlocks_callback($matches) {
-        $lines = $matches[1];
-        $attr = "";
-        $text = preg_replace("/^[ ]*![ ]?/m", "", $lines);
-        if (preg_match("/^[ ]*".$this->id_class_attr_catch_re."[ ]*\n([\S\s]*)$/m", $text, $matches)) {
-            $attr = $this->doExtraAttributes("div", $dummy =& $matches[1]);
-            $text = $matches[2];
-        } elseif ($this->noticeLevel==0) {
-            $level = strspn(str_replace(array("![", " "), "", $lines), "!");
-            $attr = " class=\"notice$level\"";
+    // Handle collapsible block elements over multiple lines
+    public function _doCollapsibleBlocks_callback($matches) {
+        $name = $attributes = $attr = "";
+        $text = preg_replace("/^[ ]*\?[ ]?/m", "", $matches[1]);
+        if (preg_match("/^[ ]*".$this->id_class_attr_catch_re."[ ]*\n([\S\s]*)$/m", $text, $parts)) {
+            $name = $this->getBlockName("", $parts[1]);
+            $text = $parts[2];
+            $attributes = $parts[1];
+            $attr = $this->doExtraAttributes("details", $parts[1]);
         }
         if (!is_string_empty($text)) {
-            ++$this->noticeLevel;
-            $output = "<div$attr>\n".$this->runBlockGamut($text)."\n</div>";
-            --$this->noticeLevel;
+            $output = $this->page->parseContentElement($name, $text, $attributes, "collapsible");
+            if (is_null($output)) {
+                $summary = "";
+                if (preg_match("/^(.*?)\n\n(.*)$/s", $text, $parts)) {
+                    $summary = $parts[1];
+                    $text = $parts[2];
+                }
+                $output = "<details$attr>\n";
+                if (!is_string_empty($summary)) $output .= "<summary>".$this->runSpanGamut($summary)."</summary>\n";
+                $output .= $this->runBlockGamut($text)."\n</details>";
+            }
+        } else {
+            $output = "<details$attr></details>";
+        }
+        return "\n".$this->hashBlock($output)."\n\n";
+    }
+    
+    // Handle general block elements
+    public function doGeneralBlocks($text) {
+        return preg_replace_callback("/((?>^[ ]*!(?!\[)[ ]?.+\n(.+\n)*)+)/m", array($this, "_doGeneralBlocks_callback"), $text);
+    }
+    
+    // Handle general block elements over multiple lines
+    public function _doGeneralBlocks_callback($matches) {
+        $name = $attributes = $attr = "";
+        $text = preg_replace("/^[ ]*![ ]?/m", "", $matches[1]);
+        if (preg_match("/^[ ]*".$this->id_class_attr_catch_re."[ ]*\n([\S\s]*)$/m", $text, $parts)) {
+            $name = $this->getBlockName("", $parts[1]);
+            $text = $parts[2];
+            $attributes = $parts[1];
+            $attr = $this->doExtraAttributes("div", $parts[1]);
+        }
+        if (!is_string_empty($text)) {
+            $output = $this->page->parseContentElement($name, $text, $attributes, "general");
+            if (is_null($output)) {
+                $output = "<div$attr>\n".$this->runBlockGamut($text)."\n</div>";
+            }
         } else {
             $output = "<div$attr></div>";
         }
@@ -4045,6 +4079,19 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         }
 		return $text;
     }
+                                      
+    // Return suitable name for block element
+    public function getBlockName($language, $attributes) {
+        if (!is_string_empty($language)) {
+            $name = ltrim($language, ".");
+        } else {
+            $name = "";
+            foreach (explode(" ", $attributes) as $token) {
+                if (substru($token, 0, 1)==".") { $name = substru($token, 1); break; }
+            }
+        }
+        return $name;
+    }
 
     // Return unique id attribute
     public function getIdAttribute($text) {
@@ -4054,6 +4101,8 @@ class YellowMarkdownParser extends MarkdownExtraParser {
         if (!isset($this->idAttributes[$text])) {
             $this->idAttributes[$text] = $text;
             $attr = " id=\"$text\"";
+        } else {
+            $attr = " id=\"error-duplicate-heading\"";
         }
         return $attr;
     }

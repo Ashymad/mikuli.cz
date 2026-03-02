@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -21,7 +21,7 @@ jobs:
         run: echo "::add-matcher::${{ runner.tool_cache }}/php.json"
       - name: Set up test environment
         run: |
-          php yellow.php skip installation maximal
+          php yellow.php skip installation large
           echo "Generate:exclude" > content/contact/page.md 
           echo "Generate:exclude" > content/search/page.md
       - name: Run tests
@@ -30,11 +30,11 @@ jobs:
     name: PHP ${{ matrix.php }}
     strategy:
       matrix:
-        php: [8.3, 8.2, 8.1, 8.0, 7.4, 7.3, 7.2, 7.1, 7.0]
+        php: [8.5, 8.4, 8.3, 8.2, 8.1, 8.0, 7.4, 7.3, 7.2, 7.1, 7.0]
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -46,6 +46,6 @@ jobs:
       - name: Set up problem matcher
         run: echo "::add-matcher::${{ runner.tool_cache }}/php.json"
       - name: Set up test environment
-        run: php yellow.php skip installation minimal
+        run: php yellow.php skip installation
       - name: Run tests
         run: php yellow.php generate tests

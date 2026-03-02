@@ -2,7 +2,7 @@
 // Image extension, https://github.com/annaesvensson/yellow-image
 
 class YellowImage {
-    const VERSION = "0.8.19";
+    const VERSION = "0.9.3";
     public $yellow;             // access to API
 
     // Handle initialisation
@@ -10,8 +10,9 @@ class YellowImage {
         $this->yellow = $yellow;
         $this->yellow->system->setDefault("imageUploadWidthMax", "1280");
         $this->yellow->system->setDefault("imageUploadHeightMax", "1280");
-        $this->yellow->system->setDefault("imageUploadJpgQuality", "80");
-        $this->yellow->system->setDefault("imageThumbnailJpgQuality", "80");
+        $this->yellow->system->setDefault("imageUploadJpegQuality", "80");
+        $this->yellow->system->setDefault("imageThumbnailJpegQuality", "80");
+        $this->yellow->system->setDefault("imageJpegExtension", "auto");
     }
     
     // Handle update
@@ -26,8 +27,8 @@ class YellowImage {
         }
     }
 
-    // Handle page content of shortcut
-    public function onParseContentShortcut($page, $name, $text, $type) {
+    // Handle page content element
+    public function onParseContentElement($page, $name, $text, $attributes, $type) {
         $output = null;
         if ($name=="image" && $type=="inline") {
             list($name, $alt, $style, $width, $height) = $this->yellow->toolbox->getTextArguments($text);
@@ -54,27 +55,31 @@ class YellowImage {
     // Handle media file changes
     public function onEditMediaFile($file, $action, $email) {
         if ($action=="upload") {
-            $fileName = $file->fileName;
+            $fileName = $file->get("fileNameTemp");
             list($widthInput, $heightInput, $orientation, $type) =
                 $this->yellow->toolbox->detectImageInformation($fileName, $file->get("type"));
             $widthMax = $this->yellow->system->get("imageUploadWidthMax");
             $heightMax = $this->yellow->system->get("imageUploadHeightMax");
-            if ($type=="gif" || $type=="jpg" || $type=="png") {
+            if ($type=="gif" || $type=="jpeg" || $type=="png") {
                 if ($widthInput>$widthMax || $heightInput>$heightMax) {
                     list($widthOutput, $heightOutput) = $this->getImageDimensionsFit($widthInput, $heightInput, $widthMax, $heightMax);
                     $image = $this->loadImage($fileName, $type);
                     $image = $this->resizeImage($image, $widthInput, $heightInput, $widthOutput, $heightOutput);
                     $image = $this->orientImage($image, $orientation);
-                    if (!$this->saveImage($image, $fileName, $type, $this->yellow->system->get("imageUploadJpgQuality"))) {
+                    if (!$this->saveImage($image, $fileName, $type, $this->yellow->system->get("imageUploadJpegQuality"))) {
                         $file->error(500, "Can't write file '$fileName'!");
                     }
                 } elseif ($orientation>1) {
                     $image = $this->loadImage($fileName, $type);
                     $image = $this->orientImage($image, $orientation);
-                    if (!$this->saveImage($image, $fileName, $type, $this->yellow->system->get("imageUploadJpgQuality"))) {
+                    if (!$this->saveImage($image, $fileName, $type, $this->yellow->system->get("imageUploadJpegQuality"))) {
                         $file->error(500, "Can't write file '$fileName'!");
                     }
                 }
+            }
+            if ($type=="jpeg") {
+                $file->fileName = dirname($file->fileName)."/".pathinfo($file->fileName, PATHINFO_FILENAME).$this->getImageExtension($file->fileName, $type);
+                $file->set("type", $this->yellow->toolbox->getFileType($file->fileName));
             }
         }
     }
@@ -93,14 +98,14 @@ class YellowImage {
             $pathThumb = $this->yellow->lookup->findMediaDirectory("coreThumbnailLocation");
             $fileNameThumb = ltrim(str_replace(array("/", "\\", "."), "-", dirname($fileNameShort)."/".pathinfo($fileName, PATHINFO_FILENAME)), "-");
             $fileNameThumb .= "-".$widthOutput."x".$heightOutput;
-            $fileNameThumb .= ".".pathinfo($fileName, PATHINFO_EXTENSION);
+            $fileNameThumb .= $this->getImageExtension($fileName, $type);
             $fileNameOutput = $pathThumb.$fileNameThumb;
             if ($this->isFileNotUpdated($fileName, $fileNameOutput)) {
                 $image = $this->loadImage($fileName, $type);
                 $image = $this->resizeImage($image, $widthInput, $heightInput, $widthOutput, $heightOutput);
                 $image = $this->orientImage($image, $orientation);
                 if (is_file($fileNameOutput)) $this->yellow->toolbox->deleteFile($fileNameOutput);
-                if (!$this->saveImage($image, $fileNameOutput, $type, $this->yellow->system->get("imageThumbnailJpgQuality")) ||
+                if (!$this->saveImage($image, $fileNameOutput, $type, $this->yellow->system->get("imageThumbnailJpegQuality")) ||
                     !$this->yellow->toolbox->modifyFile($fileNameOutput, $this->yellow->toolbox->getFileModified($fileName))) {
                     $this->yellow->page->error(500, "Can't write file '$fileNameOutput'!");
                 }
@@ -121,14 +126,22 @@ class YellowImage {
         }
         return array(intval($widthOutput), intval($heightOutput));
     }
+    
+    // Return image extension
+    public function getImageExtension($fileName, $type) {
+        $jpegExtension = $this->yellow->system->get("imageJpegExtension");
+        $fileExtension = ".".pathinfo($fileName, PATHINFO_EXTENSION);
+        if ($jpegExtension!="auto" && $type=="jpeg") $fileExtension = $jpegExtension;
+        return $fileExtension;
+    }
 
     // Load image from file
     public function loadImage($fileName, $type) {
         $image = false;
         switch ($type) {
-            case "gif": $image = @imagecreatefromgif($fileName); break;
-            case "jpg": $image = @imagecreatefromjpeg($fileName); break;
-            case "png": $image = @imagecreatefrompng($fileName); break;
+            case "gif":  $image = @imagecreatefromgif($fileName); break;
+            case "jpeg": $image = @imagecreatefromjpeg($fileName); break;
+            case "png":  $image = @imagecreatefrompng($fileName); break;
         }
         return $image;
     }
@@ -137,9 +150,9 @@ class YellowImage {
     public function saveImage($image, $fileName, $type, $quality) {
         $ok = false;
         switch ($type) {
-            case "gif": $ok = @imagegif($image, $fileName); break;
-            case "jpg": $ok = @imagejpeg($image, $fileName, $quality); break;
-            case "png": $ok = @imagepng($image, $fileName); break;
+            case "gif":  $ok = @imagegif($image, $fileName); break;
+            case "jpeg": $ok = @imagejpeg($image, $fileName, $quality); break;
+            case "png":  $ok = @imagepng($image, $fileName); break;
         }
         return $ok;
     }
