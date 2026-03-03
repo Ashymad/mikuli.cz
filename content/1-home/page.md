@@ -8,7 +8,8 @@ am Szymon Mikulicz.
 I am an open source maniac and an all-around self-diagnosed weirdo. Currently I
 am doing a Bachelor's in philosophy on the University of Warsaw, having already
 finished my Masters in acoustic engineering and having done half a Phd as well. I also
-work at Aptiv as a software engineer. 
+work at Arista as a network software engineer. Before that I worked in Aptiv as
+an embedded engineer and in Nokia as a tool engineer.
 
 I enjoy creating and analyzing complicated software. The kind that makes you
 look and wonder "I don't know how it works, I don't know why it works and I
