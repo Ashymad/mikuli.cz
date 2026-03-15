@@ -8,7 +8,7 @@ packages:
   - php85-mbstring
   - php85-zip
 environment:
-  site: ashymad.srht.site
+  site: mikuli.cz
 tasks:
 - package: |
     cd $site
