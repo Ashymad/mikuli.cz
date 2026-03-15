@@ -1,0 +1,18 @@
+image: alpine/edge
+oauth: pages.sr.ht/PAGES:RW
+packages:
+  - hut
+  - php85
+  - php85-curl
+  - php85-gd
+  - php85-mbstring
+  - php85-zip
+environment:
+  site: ashymad.srht.site
+tasks:
+  - package: |
+    cd $site
+    php85 yellow.php generate
+    tar -C public -cvz . > ../site.tar.gz
+  - upload: |
+    hut pages publish -d $site site.tar.gz
