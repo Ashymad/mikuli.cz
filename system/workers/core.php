@@ -2,7 +2,7 @@
 // Core extension, https://github.com/annaesvensson/yellow-core
 
 class YellowCore {
-    const VERSION = "0.9.22";
+    const VERSION = "0.9.26";
     const RELEASE = "0.9";
     public $content;        // content files
     public $media;          // media files
@@ -28,6 +28,7 @@ class YellowCore {
         $this->system->setDefault("sitename", "Localhost");
         $this->system->setDefault("author", "Datenstrom");
         $this->system->setDefault("email", "webmaster");
+        $this->system->setDefault("from", "noreply");
         $this->system->setDefault("language", "en");
         $this->system->setDefault("layout", "default");
         $this->system->setDefault("theme", "default");
@@ -144,9 +145,6 @@ class YellowCore {
             }
             if (!is_readable($fileName)) $this->page->error(404);
         }
-        if ($this->system->get("coreDebugMode")>=1 && ($this->lookup->isContentFile($fileName) || $this->page->isError())) {
-            echo "YellowCore::processRequest file:$fileName<br />\n";
-        }
         return $statusCode;
     }
     
@@ -155,7 +153,6 @@ class YellowCore {
         ob_clean();
         $statusCode = $this->sendPage($this->page->scheme, $this->page->address, $this->page->base,
             $this->page->location, $this->page->fileName, false, false);
-        if ($this->system->get("coreDebugMode")>=1) echo "YellowCore::processRequestError file:".$this->page->fileName."<br />\n";
         return $statusCode;
     }
     
@@ -183,8 +180,8 @@ class YellowCore {
     }
     
     // Send page response
-    public function sendPage($scheme, $address, $base, $location, $fileName, $cacheable, $showSource) {
-        $rawData = $showSource ? $this->toolbox->readFile($fileName) : $this->page->getRawDataError();
+    public function sendPage($scheme, $address, $base, $location, $fileName, $cacheable, $regular) {
+        $rawData = $regular ? $this->toolbox->readFile($fileName) : $this->page->getRawDataError();
         $statusCode = max($this->page->statusCode, 200);
         $errorMessage = $this->page->errorMessage;
         $this->page = new YellowPage($this);
@@ -198,11 +195,11 @@ class YellowCore {
             foreach ($this->page->headerData as $key=>$value) {
                 echo "YellowCore::sendPage $key: $value<br />\n";
             }
-            $language = $this->page->get("language");
+            $fileNameResponse = $regular ? $this->page->fileName : $this->page->getFileNameError();
             $layout = $this->page->get("layout");
             $theme = $this->page->get("theme");
-            $parser = $this->page->get("parser");
-            echo "YellowCore::sendPage language:$language layout:$layout theme:$theme parser:$parser<br />\n";
+            echo "YellowCore::sendPage file:$fileNameResponse<br />\n";
+            echo "YellowCore::sendPage layout:$layout theme:$theme<br />\n";
         }
         return $statusCode;
     }
@@ -1147,7 +1144,7 @@ class YellowLookup {
             $rootLocations["root/"] = "$pathBase";
         }
         if ($this->yellow->system->get("coreDebugMode")>=3) {
-            foreach ($rootLocations as $key=>$key) {
+            foreach ($rootLocations as $key=>$value) {
                 echo "YellowLookup::findContentRootLocations $key -> $value<br />\n";
             }
         }
@@ -2973,7 +2970,7 @@ class YellowToolbox {
                 if ($statusCode!=0) break;
             }
         }
-        if ($statusCode==0) {
+        if ($statusCode==0 && $this->yellow->system->get("coreWebsiteFile")!="none") {
             $line = date("Y-m-d H:i:s")." ".trim($action)." ".trim($message)."\n";
             $this->appendFile($this->yellow->system->get("coreServerInstallDirectory").
                 $this->yellow->system->get("coreExtensionDirectory").
@@ -3165,8 +3162,8 @@ class YellowPage {
                 $description = $this->yellow->toolbox->createTextDescription($this->parserData, 150);
                 $this->set("description", !is_string_empty($description) ? $description : $this->get("title"));
             }
-            if ($this->yellow->system->get("coreDebugMode")>=3) {
-                echo "YellowPage::parseContent location:".$this->location."<br />\n";
+            if ($this->yellow->system->get("coreDebugMode")>=2) {
+                echo "YellowPage::parseContent file:".$this->fileName." parser:".$this->get("parser")."<br />\n";
             }
         }
     }
@@ -3196,7 +3193,6 @@ class YellowPage {
         $this->parsePageLayout($this->get("layout"));
         if (!$this->isCacheable()) $this->setHeader("Cache-Control", "no-cache, no-store");
         if (!$this->isHeader("Content-Type")) $this->setHeader("Content-Type", "text/html; charset=utf-8");
-        if (!$this->isHeader("Content-Modified")) $this->setHeader("Content-Modified", $this->getModified(true));
         if (!$this->isHeader("Last-Modified")) $this->setHeader("Last-Modified", $this->getLastModified(true));
         $theme = $this->yellow->lookup->normaliseName($this->get("theme"));
         if (!is_file($this->yellow->system->get("coreThemeDirectory").$theme.".css") &&
@@ -3493,9 +3489,7 @@ class YellowPage {
     // Return raw data for error page
     public function getRawDataError() {
         $statusCode = $this->statusCode;
-        $sharedLocation = $this->yellow->content->getHomeLocation($this->location)."shared/";
-        $fileNameError = $this->yellow->lookup->findFileFromContentLocation($sharedLocation, true).$this->yellow->system->get("coreContentErrorFile");
-        $fileNameError = str_replace("(.*)", $statusCode, $fileNameError);
+        $fileNameError = $this->getFileNameError();
         $languageError = $this->yellow->lookup->findContentLanguage($this->fileName, $this->yellow->system->get("language"));
         if (is_file($fileNameError)) {
             $rawData = $this->yellow->toolbox->readFile($fileNameError);
@@ -3507,6 +3501,13 @@ class YellowPage {
             $rawData .= "Layout:error\n---\n".$this->errorMessage;
         }
         return $rawData;
+    }
+    
+    // Return file name for error page
+    public function getFileNameError() {
+        $sharedLocation = $this->yellow->content->getHomeLocation($this->location)."shared/";
+        $fileNameError = $this->yellow->lookup->findFileFromContentLocation($sharedLocation, true).$this->yellow->system->get("coreContentErrorFile");
+        return str_replace("(.*)", $this->statusCode, $fileNameError);
     }
     
     // Return page status code, number or HTTP format

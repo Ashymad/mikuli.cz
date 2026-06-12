@@ -2,7 +2,7 @@
 // Edit extension, https://github.com/annaesvensson/yellow-edit
 
 class YellowEdit {
-    const VERSION = "0.9.15";
+    const VERSION = "0.9.18";
     public $yellow;         // access to API
     public $response;       // web response
     public $merge;          // text merge
@@ -13,7 +13,6 @@ class YellowEdit {
         $this->yellow = $yellow;
         $this->response = new YellowEditResponse($yellow);
         $this->merge = new YellowEditMerge($yellow);
-        $this->yellow->system->setDefault("editSiteEmail", "noreply");
         $this->yellow->system->setDefault("editLocation", "/edit/");
         $this->yellow->system->setDefault("editUploadNewLocation", "/media/@group/@filename");
         $this->yellow->system->setDefault("editUploadExtensions", ".gif, .jpeg, .jpg, .mp3, .mp4, .ogg, .pdf, .png, .svg, .zip");
@@ -302,7 +301,8 @@ class YellowEdit {
                 $statusCode = $this->yellow->sendStatus(301, $location);
             } else {
                 $statusCode = 404;
-                if ($this->response->isUserAccess("create", $location)) $statusCode = 434;
+                if ($this->response->isUserAccess("create", $location) && $this->response->isCreateLocation($location))
+                    $statusCode = 434;
                 if ($this->response->isUserAccess("restore", $location) && $this->response->isDeletedLocation($location)) {
                     $statusCode = 435;
                 }
@@ -383,7 +383,7 @@ class YellowEdit {
         }
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "confirm") ? "next" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -403,7 +403,7 @@ class YellowEdit {
         }
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "approve") ? "done" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -425,7 +425,7 @@ class YellowEdit {
         }
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "welcome") ? "done" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -440,7 +440,7 @@ class YellowEdit {
         if ($this->response->status=="ok" && !$this->yellow->user->isExisting($email)) $this->response->status = "next";
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "recover") ? "next" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -505,7 +505,7 @@ class YellowEdit {
         }
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $emailSource, "change") ? "done" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -556,7 +556,7 @@ class YellowEdit {
         if ($this->response->status=="ok") $this->response->status = $this->getUserAccount($this->response->action, $email, "");
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "remove") ? "next" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         $statusCode = $this->yellow->processRequest($scheme, $address, $base, $location, $fileName, false);
         return $statusCode;
@@ -578,7 +578,7 @@ class YellowEdit {
         }
         if ($this->response->status=="ok") {
             $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, "goodbye") ? "ok" : "error";
-            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+            if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
         }
         if ($this->response->status=="ok") {
             $fileNameUser = $this->yellow->system->get("coreExtensionDirectory").$this->yellow->system->get("coreUserFile");
@@ -637,7 +637,7 @@ class YellowEdit {
             if ($this->response->status=="ok") {
                 $action = $email!=$emailSource ? "verify" : "change";
                 $this->response->status = $this->response->sendMail($scheme, $address, $base, $email, $action) ? "next" : "error";
-                if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+                if ($this->response->status=="error") $this->yellow->page->error(500, "Can't send email message!");
             }
         } else {
             if ($this->response->status=="ok") {
@@ -944,7 +944,7 @@ class YellowEdit {
                     }
                     if ($status=="ok" && $statusBeforeProtection=="active") {
                         $status = $this->response->sendMail($scheme, $address, $base, $email, "reactivate") ? "done" : "error";
-                        if ($status=="error") $this->yellow->page->error(500, "Can't send email on this server!");
+                        if ($status=="error") $this->yellow->page->error(500, "Can't send email message!");
                     }
                 }
             }
@@ -1607,7 +1607,7 @@ class YellowEditResponse {
         $message = preg_replace("/@username/i", $userName, $message);
         $message = preg_replace("/@userlanguage/i", $userLanguage, $message);
         $sitename = $this->yellow->system->get("sitename");
-        $siteEmail = $this->yellow->system->get("editSiteEmail");
+        $siteEmail = $this->yellow->system->get("from");
         $subject = $this->yellow->language->getText("{$prefix}Subject", $userLanguage);
         $footer = $this->yellow->language->getText("editMailFooter", $userLanguage);
         $footer = str_replace("\\n", "\r\n", $footer);
@@ -1814,6 +1814,11 @@ class YellowEditResponse {
         return !is_string_empty($pathDeleted) && $this->yellow->lookup->isContentFile($fileNameRestored) &&
             $this->yellow->toolbox->renameDirectory($pathDeleted, dirname($fileNameRestored), true) &&
             $this->yellow->toolbox->writeFile($fileNameRestored, $rawDataRestored);
+    }
+    
+    // Check if location can be created
+    public function isCreateLocation($location) {
+        return !is_string_empty($this->yellow->lookup->findFileFromContentLocation($location));
     }
     
     // Check if location has been deleted

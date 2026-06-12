@@ -1,3 +1,8 @@
+2020-06-23 20:58:29 info Datenstrom Yellow 0.8.12, PHP 7.4.6, nginx 1.18.0, Linux
+2020-06-23 20:58:29 info Install extension 'English 0.8.19'
+2020-06-23 20:58:29 info Install extension 'French 0.8.19'
+2020-06-23 20:58:29 info Install extension 'German 0.8.19'
+2020-06-23 21:00:06 info Add user 'Ashymad'
 2023-12-22 17:46:30 info Install Datenstrom Yellow 0.8.23, PHP 8.2.13, Built-in 8.2.13, Linux
 2023-12-22 17:46:30 info Install extension 'Update 0.8.97'
 2023-12-22 17:46:30 info Install extension 'Core 0.8.125'
@@ -17,3 +22,8 @@
 2026-03-02 21:53:49 info Install extension 'Blog 0.9.4'
 2026-03-02 22:02:06 info Install extension 'Previousnext 0.9.1'
 2026-03-03 21:08:43 info Install extension 'English 0.9.5'
+2026-06-12 20:07:02 info Update extension 'Core 0.9.26'
+2026-06-12 20:07:02 info Update extension 'Edit 0.9.18'
+2026-06-12 20:07:02 info Update extension 'Update 0.9.10'
+2026-06-12 20:07:33 info Apply patches for Datenstrom Yellow 0.8.19
+2026-06-12 20:07:33 info Apply patches for Datenstrom Yellow 0.9

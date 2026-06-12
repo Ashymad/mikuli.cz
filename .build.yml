@@ -12,7 +12,7 @@ environment:
 tasks:
 - package: |
     cd $site
-    php85 yellow.php generate
+    ./generate.sh php85
     tar -C public -cvz . > ../site.tar.gz
 - upload: |
     hut pages publish -d $site site.tar.gz
